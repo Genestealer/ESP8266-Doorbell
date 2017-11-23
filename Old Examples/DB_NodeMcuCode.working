@@ -1,0 +1,218 @@
+
+https://programmingelectronics.com/tutorial-19-debouncing-a-button-with-arduino-old-version/
+
+
+/*Simple Door Bell (Push Button) Notification using pushingbox.
+   Based on ESP8266 Client (From library Examples)
+   and Clement87 PushingBox for Arduino official ethernet code
+
+   By LeRoy Miller, Copywrite 2016
+
+*/
+
+/*This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses
+*/
+
+#include <ESP8266WiFi.h>
+
+
+char DEVID1[] = "vDB5B1B1B2D1546B"; //DevID code
+const char* ssid = "IoT_VLAN"; //SSID of your router
+const char* password = "1Brainbox2"; //WEP/WPA/WPA2 code for router
+
+
+//initialize and declare variables
+const int ledPin = 16; //led attached to this pin
+const int buttonPin = 5; //push button attached to this pin
+
+int buttonState = LOW; //this variable tracks the state of the button, low if not pressed, high if pressed
+int ledState = -1; //this variable tracks the state of the LED, negative if off, positive if on
+
+long lastDebounceTime = 0;  // the last time the output pin was toggled
+long debounceDelay = 500;    // the debounce time; increase if the output flickers
+
+
+
+
+// Debug mode
+boolean DEBUG = true;
+
+char serverName[] = "api.pushingbox.com";
+boolean pinDevid1State = false;                // Save the last state of the Pin for DEVID1
+boolean lastConnected = false;                 // State of the connection last time through the main loop
+
+WiFiClient client;
+
+void setup() {
+  Serial.begin(115200);
+  delay(10);
+  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(ledPin, OUTPUT);
+
+
+  WiFi.begin(ssid, password);
+
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+  delay(1000);
+}
+
+
+//Function for sending the request to PushingBox
+void sendToPushingBox(char devid[]){
+  client.stop();
+  Serial.println("connecting...");
+
+  if (client.connect(serverName, 80)) {
+    Serial.println("connected");
+
+    Serial.println("sendind request");
+    client.print("GET /pushingbox?devid=");
+    client.print(devid);
+    client.println(" HTTP/1.1");
+    client.print("Host: ");
+    client.println(serverName);
+    client.println("User-Agent: Arduino");
+    client.println();
+  }
+  else {
+    Serial.println("connection failed");
+  }
+
+  //
+  // if (client.connect(server, 80)) {
+  //   Serial.println("Connecting");
+  //   client.print("GET /pushingbox?devid=");
+  //   client.print(apiKey);
+  //   client.println(" HTTP/1.1");
+  //   client.print("Host: ");
+  //   client.println(server);
+  //   client.println("User-Agent: Arduino");
+  //   client.println();
+  //   // Read all the lines of the reply from server and print them to Serial
+  //   while (client.available()) {
+  //     String line = client.readStringUntil('\r');
+  //     Serial.print(line);
+  //     buttonPush = 1;
+  //   }
+  //
+  //   Serial.println();
+  //   Serial.println("closing connection");
+  // }
+
+
+
+
+}
+
+
+void loop() {
+
+  //sample the state of the button - is it pressed or not?
+  buttonState = digitalRead(buttonPin);
+
+  //filter out any noise by setting a time buffer
+  if ( (millis() - lastDebounceTime) > debounceDelay) {
+
+    //if the button has been pressed, lets toggle the LED from "off to on" or "on to off"
+    if ( (buttonState == LOW) && (ledState < 0) ) {
+
+      digitalWrite(ledPin, LOW); //turn LED on
+      ledState = -ledState; //now the LED is on, we need to change the state
+      lastDebounceTime = millis(); //set the current time
+      sendToPushingBox(DEVID1);
+      //       delay(5000);
+      }
+    else if ( (buttonState == LOW) && (ledState > 0) ) {
+
+      digitalWrite(ledPin, LOW); //turn LED off
+      ledState = -ledState; //now the LED is off, we need to change the state
+      lastDebounceTime = millis(); //set the current time
+    }//close if/else
+
+  }//close if(time buffer)
+
+}//close void loop
+
+
+
+// void loop() {
+//   yield();
+//   //
+//   Serial.println("loop!");
+//   if (pinDevid1 == LOW) {
+//     if ((millis() - lastDebounceTime) > debounceDelay) {
+//       lastDebounceTime = millis();
+//       Serial.println("PIN PRESSED");
+//       sendToPushingBox(DEVID1);
+//       delay(5000);
+//    }
+//  }
+  // if (digitalRead(pinDevid1) == LOW && pinDevid1State == false) {
+  //
+  //   {
+  //     if(DEBUG){Serial.println("pinDevid1 is HIGH");}
+  //     pinDevid1State = true;
+  //     //Sending request to PushingBox when the pin is HIGH
+  //     sendToPushingBox(DEVID1);
+  //   }
+  //   if (digitalRead(pinDevid1) == LOW && pinDevid1State == true) // switch on pinDevid1 is OFF
+  //   {
+  //    if(DEBUG){Serial.println("pinDevid1 is LOW");}
+  //    pinDevid1State = false;
+  //    //Sending request to PushingBox when the pin is LOW
+  //    //sendToPushingBox(DEVID1);    //Here you can run an other scenario by creating a DEVID2 variable
+  //   }
+  //
+  //   //DEBUG part
+  //   // this write the respons from PushingBox Server.
+  //   // You should see a "200 OK"
+  //   if (client.available()) {
+  //     char c = client.read();
+  //     if(DEBUG){Serial.print(c);}
+  //   }
+  //
+  //   // if there's no net connection, but there was one last time
+  //   // through the loop, then stop the client:
+  //   if (!client.connected() && lastConnected) {
+  //     if(DEBUG){Serial.println();}
+  //     if(DEBUG){Serial.println("disconnecting.");}
+  //     client.stop();
+  //   }
+  //   lastConnected = client.connected();
+  //
+  //
+  //
+  //
+  // }
+
+  // client.stop();
+  // Serial.println("Waiting…");
+  // // thingspeak needs minimum 15 sec delay between updates
+  // delay(1000);
+  // pinDevid1 = 0;
+// }
