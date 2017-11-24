@@ -67,7 +67,7 @@ long lastReconnectAttempt = 0; // Reconnecting MQTT - non-blocking https://githu
 
 // MQTT publish frequency
 unsigned long previousMillis = 0;
-const long publishInterval = 6000; // Publish requency in milliseconds 60000 = 1 min
+const long publishInterval = 60000; // Publish requency in milliseconds 60000 = 1 min
 
 // LED output parameters
 const int DIGITAL_PIN_LED_ESP = 2; // Define LED on ESP8266 sub-modual
@@ -300,6 +300,7 @@ void checkButtonState() {
       digitalWrite(DIGITAL_PIN_LED_NODEMCU, LOW); //turn LED on, lights on HIGH
       lastDebounceTime = millis(); //set the current time
       sendToPushingBox(DEVID1);
+      delay(5000); // stop, only publish once every 5 seconds
     }
   }
 }
